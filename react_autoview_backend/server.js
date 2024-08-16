@@ -1,0 +1,41 @@
+const express = require('express');
+const puppeteer = require('puppeteer');
+const cors = require('cors');
+
+const app = express();
+const port = 3001;
+
+app.use(cors());
+
+app.get('/visit', async (req, res) => {
+  const url = req.query.url;
+  if (!url) {
+    return res.status(400).send('URL parameter is required');
+  }
+
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      headless: "new",
+      timeout: 60000 // 브라우저 시작 타임아웃을 60초로 설정
+    });
+    const page = await browser.newPage();
+    await page.goto(url, {
+      waitUntil: 'networkidle0',
+      timeout: 60000 // 페이지 로드 타임아웃을 60초로 설정
+    });
+    await new Promise(resolve => setTimeout(resolve, 5000)); // 5초 대기
+    await browser.close();
+    res.send('Visit completed');
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).send('Error occurred while visiting the URL');
+  } finally {
+    if (browser) await browser.close();
+  }
+});
+
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});``

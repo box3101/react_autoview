@@ -1,0 +1,58 @@
+const express = require('express');
+const puppeteer = require('puppeteer');
+const cors = require('cors');
+
+const app = express();
+const port = 3001;
+
+app.use(cors());
+
+app.get('/visit', async (req, res) => {
+  const url = req.query.url;
+  if (!url) {
+    return res.status(400).send('URL parameter is required');
+  }
+  
+  // 요청을 즉시 응답
+  res.send('Visit request received');
+  
+  // 백그라운드에서 처리 계속
+  visitUrl(url).catch(console.error);
+});
+
+async function visitUrl(url) {
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      headless: "new",
+      timeout: 60000 // 브라우저 시작 타임아웃을 60초로 설정
+    });
+    
+    const page = await browser.newPage();
+    await page.goto(url, {
+      waitUntil: 'networkidle0',
+      timeout: 60000
+    });
+    
+    // 3분 동안 페이지와 상호작용 (10초마다 스크롤)
+    for (let i = 0; i < 18; i++) {  // 3분 = 180초, 18번 반복
+      await page.evaluate(() => {
+        window.scrollBy(0, 100);  // 페이지를 조금씩 스크롤
+      });
+      await new Promise(resolve => setTimeout(resolve, 10000));  // 10초 대기
+    }
+    
+    console.log(`Visit completed for URL: ${url}`);
+  } catch (error) {
+    console.error(`Error visiting ${url}:`, error);
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
+}
+
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});
