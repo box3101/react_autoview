@@ -12,7 +12,7 @@ function App() {
     return () => { // 컴포넌트가 소멸될 때 실행
       if (intervalId) { // intervalId가 존재하면
         clearInterval(intervalId); // intervalId를 사용해 타이머 중지
-      }
+      } ``
     };
   }, [intervalId]); // intervalId가 변경될 때만 실행
 
@@ -23,7 +23,7 @@ function App() {
       setNewUrl(""); // newUrl 초기화
     }
   };
-  
+
   const startViewing = () => { // 조회수 증가 시작 버튼 클릭 시 호출
     if (isRunning) return;  // 이미 실행 중이면 중복 실행 방지
 
@@ -33,7 +33,7 @@ function App() {
 
     setIntervalId(id); // intervalId 업데이트
     setIsRunning(true);   // 실행 중 상태로 변경
-  }; 
+  };
 
   const stopViewing = () => {  // 조회수 증가 중지 버튼 클릭 시 호출  
     if (intervalId) { // intervalId가 존재하면
