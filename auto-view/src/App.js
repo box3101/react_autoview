@@ -1,44 +1,45 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 
-const MINIMUM_COOLDOWN = 60000;  // 1분
-const BATCH_INTERVAL = 1500;     // 1.5초
-const BATCH_SIZE = 1;            // 동시에 2개 URL 처리
-const STORAGE_KEY = 'blogViewBoosterUrls';
-const MAX_RETRIES = 2;
+const MINIMUM_COOLDOWN = 60000;
+const BATCH_INTERVAL = 1500;
+const BATCH_SIZE = 1;
+const STORAGE_KEY = "blogViewBoosterUrls";
 
 const api = axios.create({
-  baseURL: 'http://localhost:3001',
-  timeout: 6000
+  baseURL: "http://localhost:3001",
+  timeout: 180000, // 3분 (체류시간 고려)
 });
 
 function App() {
   const [urls, setUrls] = useState(() => {
     const savedUrls = localStorage.getItem(STORAGE_KEY);
-    return savedUrls ? JSON.parse(savedUrls) : [
-      'https://blog.naver.com/alice__hm/224117851115',
-      'https://blog.naver.com/alice__hm/224111731085',
-      'https://blog.naver.com/alice__hm/224109188626',
-      'https://blog.naver.com/alice__hm/224106459890',
-      'https://blog.naver.com/alice__hm/224088047947',
-      'https://blog.naver.com/alice__hm/224075571417',
-      'https://blog.naver.com/alice__hm/224099570810',
-      'https://blog.naver.com/alice__hm/224094680364',
-      'https://blog.naver.com/alice__hm/224083557306',
-      'https://blog.naver.com/alice__hm/224080952200',
-      'https://blog.naver.com/alice__hm/224068530222',
-      'https://blog.naver.com/alice__hm/224056850474',
-      'https://blog.naver.com/alice__hm/224049764558',
-      'https://blog.naver.com/alice__hm/224046834363',
-      'https://blog.naver.com/alice__hm/224042456003',
-      'https://blog.naver.com/alice__hm/224041150462',
-      'https://blog.naver.com/alice__hm/224038135042',
-      'https://blog.naver.com/alice__hm/224035221923',
-      'https://blog.naver.com/alice__hm/224034443804',
-      'https://blog.naver.com/alice__hm/224031054824',
-      'https://blog.naver.com/alice__hm/224027992096',
-      'https://blog.naver.com/alice__hm/224027558521',
-    ];
+    return savedUrls
+      ? JSON.parse(savedUrls)
+      : [
+          "https://blog.naver.com/alice__hm/224117851115",
+          "https://blog.naver.com/alice__hm/224111731085",
+          "https://blog.naver.com/alice__hm/224109188626",
+          "https://blog.naver.com/alice__hm/224106459890",
+          "https://blog.naver.com/alice__hm/224088047947",
+          "https://blog.naver.com/alice__hm/224075571417",
+          "https://blog.naver.com/alice__hm/224099570810",
+          "https://blog.naver.com/alice__hm/224094680364",
+          "https://blog.naver.com/alice__hm/224083557306",
+          "https://blog.naver.com/alice__hm/224080952200",
+          "https://blog.naver.com/alice__hm/224068530222",
+          "https://blog.naver.com/alice__hm/224056850474",
+          "https://blog.naver.com/alice__hm/224049764558",
+          "https://blog.naver.com/alice__hm/224046834363",
+          "https://blog.naver.com/alice__hm/224042456003",
+          "https://blog.naver.com/alice__hm/224041150462",
+          "https://blog.naver.com/alice__hm/224038135042",
+          "https://blog.naver.com/alice__hm/224035221923",
+          "https://blog.naver.com/alice__hm/224034443804",
+          "https://blog.naver.com/alice__hm/224031054824",
+          "https://blog.naver.com/alice__hm/224027992096",
+          "https://blog.naver.com/alice__hm/224027558521",
+        ];
   });
 
   const [newUrl, setNewUrl] = useState("");
@@ -49,31 +50,19 @@ function App() {
   const [startTime, setStartTime] = useState(null);
   const pendingRequests = useRef(new Set());
   const urlCooldowns = useRef({});
-  // const processQueue = useRef([]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(urls));
   }, [urls]);
 
   useEffect(() => {
-    const total = Object.values(viewCounts).reduce((sum, count) => sum + count, 0);
+    const total = Object.values(viewCounts).reduce(
+      (sum, count) => sum + count,
+      0
+    );
     setTotalViews(total);
   }, [viewCounts]);
 
-  // 파일 상단에 userAgent 함수 추가
-  const getRandomUserAgent = () => {
-    const userAgents = [
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)',
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-      'Mozilla/5.0 (iPad; CPU OS 14_0 like Mac OS X)',
-      'Mozilla/5.0 (Android 12; Mobile; rv:68.0)',
-      'Mozilla/5.0 (Windows NT 10.0; rv:102.0) Gecko/20100101 Firefox/102.0'
-    ];
-    return userAgents[Math.floor(Math.random() * userAgents.length)];
-  };
-
-  // increaseViewCount 함수 수정
   const increaseViewCount = useCallback(async (url) => {
     if (pendingRequests.current.has(url)) return;
 
@@ -82,35 +71,27 @@ function App() {
     if (cooldown && now < cooldown) return;
 
     pendingRequests.current.add(url);
-    let retryCount = 0;
 
     try {
-      const response = await api.get(`/visit?url=${encodeURIComponent(url)}`, {
-        headers: {
-          'User-Agent': getRandomUserAgent(),
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-          'Cache-Control': 'no-cache'
-        }
-      });
+      const response = await api.get(`/visit?url=${encodeURIComponent(url)}`);
 
       if (response.status === 200) {
-        setViewCounts(prev => ({ ...prev, [url]: (prev[url] || 0) + 1 }));
+        setViewCounts((prev) => ({ ...prev, [url]: (prev[url] || 0) + 1 }));
         urlCooldowns.current[url] = Date.now() + MINIMUM_COOLDOWN;
       }
     } catch (error) {
+      console.error("Error:", error.message);
       if (error.response?.status === 429) {
         const retryAfter = error.response?.data?.remainingTime || 4;
-        urlCooldowns.current[url] = Date.now() + (retryAfter * 1000);
-      } else if (retryCount < MAX_RETRIES) {
-        retryCount++;
-        await new Promise(resolve => setTimeout(resolve, 500));
-        urlCooldowns.current[url] = Date.now() + 2000;
+        urlCooldowns.current[url] = Date.now() + retryAfter * 1000;
+      } else {
+        urlCooldowns.current[url] = Date.now() + 5000;
       }
     } finally {
       pendingRequests.current.delete(url);
     }
   }, []);
+
   useEffect(() => {
     if (!isRunning) return;
 
@@ -119,14 +100,24 @@ function App() {
       if (!isRunning || urls.length === 0) return;
 
       const now = Date.now();
-      const availableUrls = urls.filter(url => {
+      const availableUrls = urls.filter((url) => {
         const cooldown = urlCooldowns.current[url];
-        return (!cooldown || now >= cooldown) && !pendingRequests.current.has(url);
+        return (
+          (!cooldown || now >= cooldown) && !pendingRequests.current.has(url)
+        );
       });
 
       if (availableUrls.length === 0) {
-        const nextAvailable = Math.min(...Object.values(urlCooldowns.current)) - now;
-        setStatus(`모든 URL이 쿨다운 중... ${Math.max(0, Math.ceil(nextAvailable / 1000))}초 대기 중`);
+        const cooldownValues = Object.values(urlCooldowns.current);
+        if (cooldownValues.length > 0) {
+          const nextAvailable = Math.min(...cooldownValues) - now;
+          setStatus(
+            `모든 URL이 쿨다운 중... ${Math.max(
+              0,
+              Math.ceil(nextAvailable / 1000)
+            )}초 대기 중`
+          );
+        }
         return;
       }
 
@@ -134,7 +125,7 @@ function App() {
       const shuffledUrls = urlsToProcess.sort(() => Math.random() - 0.5);
       setStatus(`${shuffledUrls.length}개 URL 처리 중...`);
 
-      await Promise.all(shuffledUrls.map(url => increaseViewCount(url)));
+      await Promise.all(shuffledUrls.map((url) => increaseViewCount(url)));
     };
 
     processInterval = setInterval(processUrls, BATCH_INTERVAL);
@@ -158,8 +149,8 @@ function App() {
     }
 
     if (!urls.includes(newUrl)) {
-      setUrls(prev => [...prev, newUrl]);
-      setViewCounts(prev => ({ ...prev, [newUrl]: 0 }));
+      setUrls((prev) => [...prev, newUrl]);
+      setViewCounts((prev) => ({ ...prev, [newUrl]: 0 }));
       setNewUrl("");
     } else {
       alert("이미 추가된 URL입니다");
@@ -185,7 +176,7 @@ function App() {
   }, []);
 
   const getRunningTime = () => {
-    if (!startTime || !isRunning) return '0분';
+    if (!startTime || !isRunning) return "0분";
     const minutes = Math.floor((Date.now() - startTime) / 60000);
     return `${minutes}분`;
   };
@@ -197,69 +188,87 @@ function App() {
   };
 
   return (
-    <div className="App" style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+    <div
+      className="App"
+      style={{ padding: "20px", maxWidth: "800px", margin: "0 auto" }}
+    >
       <h1>블로그 뷰 부스터 Pro</h1>
 
-      <div style={{ marginBottom: '20px' }}>
+      <div style={{ marginBottom: "20px" }}>
         <input
           type="text"
           placeholder="블로그 주소를 입력하세요"
           value={newUrl}
           onChange={(e) => setNewUrl(e.target.value)}
-          style={{ width: '60%', padding: '8px', marginRight: '10px' }}
-          onKeyPress={(e) => e.key === 'Enter' && addUrl()}
+          style={{ width: "60%", padding: "8px", marginRight: "10px" }}
+          onKeyPress={(e) => e.key === "Enter" && addUrl()}
         />
         <button
           onClick={addUrl}
-          style={{ padding: '8px 15px', marginRight: '10px' }}
+          style={{ padding: "8px 15px", marginRight: "10px" }}
         >
           URL 추가
         </button>
         <button
           onClick={isRunning ? stopViewing : startViewing}
           style={{
-            padding: '8px 15px',
-            backgroundColor: isRunning ? '#ff4444' : '#4CAF50',
-            color: 'white',
-            border: 'none',
-            cursor: 'pointer'
+            padding: "8px 15px",
+            backgroundColor: isRunning ? "#ff4444" : "#4CAF50",
+            color: "white",
+            border: "none",
+            cursor: "pointer",
           }}
         >
           {isRunning ? "중지" : "시작"}
         </button>
       </div>
 
-      <div style={{
-        padding: '10px',
-        backgroundColor: '#f0f0f0',
-        borderRadius: '5px',
-        marginBottom: '20px'
-      }}>
+      <div
+        style={{
+          padding: "10px",
+          backgroundColor: "#f0f0f0",
+          borderRadius: "5px",
+          marginBottom: "20px",
+        }}
+      >
         <div>상태: {status}</div>
         <div>총 조회수: {totalViews}</div>
         <div>실행 시간: {getRunningTime()}</div>
         <div>분당 조회수: {getViewsPerMinute()}</div>
       </div>
 
-      <ul style={{ listStyle: 'none', padding: 0 }}>
+      <ul style={{ listStyle: "none", padding: 0 }}>
         {urls.map((url) => (
-          <li key={url} style={{
-            padding: '10px',
-            margin: '5px 0',
-            backgroundColor: pendingRequests.current.has(url) ? '#fff3e0' : 'white',
-            border: '1px solid #ddd',
-            borderRadius: '5px',
-            transition: 'background-color 0.3s'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <li
+            key={url}
+            style={{
+              padding: "10px",
+              margin: "5px 0",
+              backgroundColor: pendingRequests.current.has(url)
+                ? "#fff3e0"
+                : "white",
+              border: "1px solid #ddd",
+              borderRadius: "5px",
+              transition: "background-color 0.3s",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
               <div>
-                <span style={{ marginRight: '10px' }}>{url}</span>
-                <span style={{ color: '#666' }}>조회수: {viewCounts[url] || 0}</span>
+                <span style={{ marginRight: "10px" }}>{url}</span>
+                <span style={{ color: "#666" }}>
+                  조회수: {viewCounts[url] || 0}
+                </span>
               </div>
               <button
                 onClick={() => {
-                  setUrls(urls.filter(u => u !== url));
-                  setViewCounts(prev => {
+                  setUrls(urls.filter((u) => u !== url));
+                  setViewCounts((prev) => {
                     const newCounts = { ...prev };
                     delete newCounts[url];
                     return newCounts;
@@ -268,12 +277,12 @@ function App() {
                   pendingRequests.current.delete(url);
                 }}
                 style={{
-                  padding: '5px 10px',
-                  backgroundColor: '#ff4444',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '3px',
-                  cursor: 'pointer'
+                  padding: "5px 10px",
+                  backgroundColor: "#ff4444",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "3px",
+                  cursor: "pointer",
                 }}
               >
                 삭제
